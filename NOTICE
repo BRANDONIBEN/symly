@@ -1,0 +1,20 @@
+Symly
+Copyright 2026 Brandon Iben
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this software except in compliance with the License. A copy of the
+License is provided in the LICENSE file and at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Symly is provided free and "AS IS", without warranties or conditions of any
+kind. It works by creating and repointing a single POSIX symlink and never
+copies or deletes your media. You are responsible for keeping your own
+backups and for verifying it is safe for your workflow before relying on it.
+
+The "Symly" name, logo, and wordmark are trademarks of Brandon Iben and are
+not licensed under the Apache License. See the README for brand usage.
+
+Not affiliated with, endorsed by, or sponsored by Avid Technology, Inc.
+"Avid" and "Media Composer" are trademarks of Avid Technology, Inc. MXF is
+an open SMPTE standard.
