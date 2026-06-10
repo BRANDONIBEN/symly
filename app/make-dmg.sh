@@ -76,6 +76,7 @@ EOF
 
 create-dmg \
   --volname "Symly $VERSION" \
+  --volicon "Resources/AppIcon.icns" \
   --background "dmg-assets/dmg-background.tiff" \
   --window-pos 200 120 \
   --window-size 660 420 \
