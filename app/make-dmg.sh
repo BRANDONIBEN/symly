@@ -31,7 +31,7 @@ Symly $VERSION
 Drag Symly into the Applications folder, then open it.
 
 Free and open source. Symly organizes Avid Media Composer's MXF media by project
-through a single symlink, without ever copying, moving, or deleting your media.
+through a single symlink, so your media files stay exactly where they are.
 
 Requires macOS 13 Ventura or later.
 

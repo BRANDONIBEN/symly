@@ -1,14 +1,13 @@
 # Symly
 
 A free, open-source macOS app that organizes Avid Media Composer's MXF media by
-project **without ever moving, copying, or deleting a single file**.
+project. It repoints **a single symlink**, so your media files stay exactly where they are.
 
 Avid forces media into a rigid location (`Avid MediaFiles/MXF`). Instead of
 shuffling folders by hand, Symly makes that rigid path a **symlink** that points
 at whatever media folder you pick. Avid writes exactly where it always has; the
 media lands in the folder you chose; switching projects just repoints one link.
-Nothing is copied. Nothing is moved. Nothing is ever deleted except the symlink
-itself.
+The only thing Symly ever creates or removes is that symlink.
 
 Universal (Apple Silicon + Intel). Requires macOS 13 Ventura or later.
 

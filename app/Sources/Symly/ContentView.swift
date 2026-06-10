@@ -845,7 +845,7 @@ struct HowItWorksPage: View {
                 VStack(alignment: .leading, spacing: 15) {
                     StepRow(n: 1, title: "Pick your drive", detail: "Choose the drive your Avid media lives on.")
                     StepRow(n: 2, title: "Name your media folders", detail: "Each project gets its own media folder. Avid fills it as you import, or you copy existing MXF into the numbered 1, 2, 3 folders.")
-                    StepRow(n: 3, title: "Switch in one click", detail: "Avid always reads one link. Switching repoints it. Nothing is copied, moved, or deleted.")
+                    StepRow(n: 3, title: "Switch in one click", detail: "Avid always reads one link. Switching repoints it. Your media stays exactly where it is.")
                 }
                 .padding(.horizontal, 32)
             }
@@ -869,7 +869,7 @@ struct OnboardingPage: View {
             VStack(alignment: .leading, spacing: 18) {
                 StepRow(n: 1, title: "Pick your drive", detail: "Choose the drive your Avid media lives on.")
                 StepRow(n: 2, title: "Name your media folders", detail: "Each project gets its own media folder. Avid fills it as you import, or you copy existing MXF into the numbered 1, 2, 3 folders.")
-                StepRow(n: 3, title: "Switch in one click", detail: "Avid always reads one link. Switching repoints it. Nothing is copied, moved, or deleted.")
+                StepRow(n: 3, title: "Switch in one click", detail: "Avid always reads one link. Switching repoints it. Your media stays exactly where it is.")
             }
             .padding(.horizontal, 30)
             Spacer(minLength: 24)
