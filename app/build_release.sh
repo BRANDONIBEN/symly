@@ -26,7 +26,7 @@ cd "$(dirname "$0")"
 
 NOTARY_PROFILE="${NOTARY_PROFILE:-symly-notary}"
 APP="dist/Symly.app"
-DMG="dist/Symly.dmg"
+# DMG path is set after the build, once the app version is known (Symly-<ver>.dmg).
 
 # --- preflight ---------------------------------------------------------------
 if [ -z "${SIGN_IDENTITY:-}" ]; then
@@ -48,14 +48,16 @@ echo "==> Signing: $SIGN_IDENTITY"
 codesign --force --timestamp --options runtime --sign "$SIGN_IDENTITY" "$APP"
 codesign --verify --strict --verbose=2 "$APP"
 
-# --- package as a drag-to-install DMG ----------------------------------------
-echo "==> Building DMG"
-rm -f "$DMG"
-STAGE="$(mktemp -d)"
-cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname "Symly" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
-rm -rf "$STAGE"
+# --- package as a styled, drag-to-install DMG (shared layout) ----------------
+VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist")
+DMG="dist/Symly-$VERSION.dmg"
+echo "==> Building DMG: $DMG"
+./make-dmg.sh "$APP" "$DMG"
+
+# Sign the DMG container too (not just the app inside), so the downloaded file is
+# itself Developer ID-signed and passes spctl's primary-signature assessment.
+echo "==> Signing the DMG"
+codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG"
 
 # --- notarize (waits for Apple; usually 1-5 min) -----------------------------
 echo "==> Notarizing via profile '$NOTARY_PROFILE' (this waits for Apple)"

@@ -39,6 +39,7 @@ struct RootView: View {
             screen
                 .animation(reduce ? nil : .spring(response: 0.32, dampingFraction: 0.85), value: model.phase)
                 .animation(reduce ? nil : .spring(response: 0.32, dampingFraction: 0.85), value: model.page)
+                .animation(reduce ? nil : .spring(response: 0.32, dampingFraction: 0.85), value: model.showOnboarding)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .ignoresSafeArea()
@@ -61,11 +62,15 @@ struct RootView: View {
     }
 
     @ViewBuilder private var screen: some View {
-        switch model.page {
-        case .howItWorks: HowItWorksPage().transition(.gentle)
-        case .help:       HelpPage().transition(.gentle)
-        case .settings:   SettingsPage().transition(.gentle)
-        case .none:       homeContent.transition(.gentle)
+        if model.showOnboarding {
+            OnboardingPage().transition(.gentle)
+        } else {
+            switch model.page {
+            case .howItWorks: HowItWorksPage().transition(.gentle)
+            case .help:       HelpPage().transition(.gentle)
+            case .settings:   SettingsPage().transition(.gentle)
+            case .none:       homeContent.transition(.gentle)
+            }
         }
     }
 
@@ -283,11 +288,13 @@ struct ChooseVolumeStep: View {
                         }
                         .frame(maxWidth: .infinity).padding(.vertical, 22)
                     } else if sortedVolumes.count > 4 {
-                        VStack(spacing: 7) {
-                            ScrollView { volumeRows }.frame(height: 246).scrollIndicators(.visible)
-                            Text("\(sortedVolumes.count) drives connected. Scroll to see them all.")
+                        VStack(spacing: 6) {
+                            // 4 full rows (54pt each, 8pt gaps) plus a 10pt peek of
+                            // the 5th, hard-clipped, so the fold reads as a tuck:
+                            // there are more drives just under it.
+                            ScrollView { volumeRows }.frame(height: 258).scrollIndicators(.hidden)
+                            Text("\(sortedVolumes.count) drives connected. Scroll for the rest.")
                                 .font(.system(size: 9.5)).foregroundStyle(Palette.ink30)
-                                .padding(.top, 5)
                         }
                     } else {
                         volumeRows
@@ -322,9 +329,9 @@ struct VolumeChoiceRow: View {
             Image(systemName: icon)
                 .font(.system(size: 15)).foregroundStyle(iconColor).frame(width: 22)
             VStack(alignment: .leading, spacing: 2) {
-                Text(vol.name).font(.system(size: 13, weight: .medium))
+                Text(vol.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
                     .foregroundStyle(selectable ? Palette.ink : Palette.ink45)
-                Text(subtitle).font(.system(size: 10)).foregroundStyle(subtitleColor)
+                Text(subtitle).font(.system(size: 10)).foregroundStyle(subtitleColor).lineLimit(1)
             }
             Spacer()
             Image(systemName: selectable ? "chevron.right" : "lock.fill")
@@ -332,6 +339,7 @@ struct VolumeChoiceRow: View {
                 .foregroundStyle(active ? Palette.accentLight : Palette.ink30)
         }
         .padding(.horizontal, 13).padding(.vertical, 12)
+        .frame(height: 54)
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(active ? Palette.selection : Palette.fieldFill))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
             .strokeBorder(active ? Palette.accent.opacity(0.4) : Palette.hairline, lineWidth: 1))
@@ -355,7 +363,9 @@ struct VolumeChoiceRow: View {
     }
     private var subtitle: String {
         switch vol.eligibility {
-        case .eligible: return vol.isInternal ? "Internal" : (vol.isRemovable ? "External" : "Volume")
+        case .eligible:
+            let kind = vol.isInternal ? "Internal" : (vol.isRemovable ? "External" : "Volume")
+            return vol.freeSpaceLabel.map { "\(kind) · \($0)" } ?? kind
         case .network: return "Network drive · test on your setup first"
         case .readOnly: return "Read-only · can't create the link"
         case .unsupported(let kind): return "\(kind) · can't hold a symlink"
@@ -369,7 +379,7 @@ struct VolumeChoiceRow: View {
     }
     private var helpText: String {
         switch vol.eligibility {
-        case .unsupported: return "exFAT and FAT drives can't store a symlink. Reformat as APFS or Mac OS Extended to use this drive."
+        case .unsupported(let reason): return reason
         case .readOnly: return "This drive is mounted read-only, so Symly can't create the link."
         case .network: return "Network and shared volumes support symlinks inconsistently. Test the import/switch flow on your setup before relying on it."
         case .eligible: return ""
@@ -622,8 +632,11 @@ struct ReadyVolumeRow: View {
     var body: some View {
         HStack(spacing: 9) {
             Image(systemName: "externaldrive.fill").font(.system(size: 12)).foregroundStyle(Palette.accentLight)
-            Text(model.volumeName).font(.system(size: 13)).foregroundStyle(Palette.ink)
+            Text(model.volumeName).font(.system(size: 13)).foregroundStyle(Palette.ink).lineLimit(1)
             Spacer()
+            if model.driveConnected, let free = model.selectedVolume?.freeSpaceLabel {
+                Text(free).font(.system(size: 11)).foregroundStyle(Palette.ink30)
+            }
             if !model.driveConnected {
                 Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 10)).foregroundStyle(.orange)
             }
@@ -837,6 +850,35 @@ struct HowItWorksPage: View {
                 .padding(.horizontal, 32)
             }
         }
+    }
+}
+
+/// First-launch welcome: the How It Works steps with no back button and a
+/// "Let's go" CTA that drops you into setup. Shown only on the very first run.
+struct OnboardingPage: View {
+    @EnvironmentObject var model: AppModel
+    var body: some View {
+        VStack(spacing: 0) {
+            Color.clear.frame(height: 48)
+            MXFIconTile(size: 50)
+            Spacer().frame(height: 18)
+            Text("How it works").font(.system(size: 22, weight: .bold)).foregroundStyle(Palette.ink)
+            Spacer().frame(height: 30)
+            LinkDiagram(rightLabel: "Symly Media").padding(.horizontal, 30)
+            Spacer().frame(height: 36)
+            VStack(alignment: .leading, spacing: 18) {
+                StepRow(n: 1, title: "Pick your drive", detail: "Choose the drive your Avid media lives on.")
+                StepRow(n: 2, title: "Name your media folders", detail: "Each project gets its own media folder. Avid fills it as you import, or you copy existing MXF into the numbered 1, 2, 3 folders.")
+                StepRow(n: 3, title: "Switch in one click", detail: "Avid always reads one link. Switching repoints it. Nothing is copied, moved, or deleted.")
+            }
+            .padding(.horizontal, 30)
+            Spacer(minLength: 24)
+            PrimaryButton(title: "Set up my drive", enabled: true) { model.completeOnboarding() }
+                .padding(.horizontal, 30)
+            Spacer().frame(height: 26)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .ignoresSafeArea()
     }
 }
 
@@ -1112,15 +1154,19 @@ struct SettingsPage: View {
             Text("PROTECTION").font(.system(size: 10, weight: .semibold)).tracking(1.3).foregroundStyle(Palette.ink30)
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Lock the media folder").font(.system(size: 13, weight: .medium)).foregroundStyle(Palette.ink)
-                    Text("Stops \(model.projectsFolderName) from being renamed or deleted by accident in Finder.")
+                    Text("Lock the media folder").font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(model.folderLockAvailable ? Palette.ink : Palette.ink45)
+                    Text(model.folderLockAvailable
+                         ? "Stops \(model.projectsFolderName) from being renamed or deleted by accident in Finder."
+                         : "Not available on this drive's format. exFAT and FAT have no folder-level locking; Symly works normally otherwise.")
                         .font(.system(size: 11)).foregroundStyle(Palette.ink45)
                         .fixedSize(horizontal: false, vertical: true).lineSpacing(1.5)
                 }
                 Spacer(minLength: 0)
-                Toggle("", isOn: Binding(get: { model.protectProjectsFolder },
+                Toggle("", isOn: Binding(get: { model.protectProjectsFolder && model.folderLockAvailable },
                                          set: { model.setProtection($0) }))
                     .labelsHidden().toggleStyle(.switch).tint(Palette.accent)
+                    .disabled(!model.folderLockAvailable)
             }
             .padding(15)
             .cardStyle()

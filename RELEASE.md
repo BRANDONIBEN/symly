@@ -35,7 +35,7 @@ After Track B produces the notarized DMG:
 ```sh
 # 3. Tag + release, attach the DMG
 git tag v0.1.0 && git push origin v0.1.0
-gh release create v0.1.0 dist/Symly.dmg \
+gh release create v0.1.0 dist/Symly-0.1.0.dmg \
   --title "Symly 0.1.0" \
   --notes "First release. Signed + notarized for macOS 13+."
 ```

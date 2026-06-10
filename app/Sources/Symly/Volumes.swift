@@ -11,13 +11,16 @@ struct VolumeInfo: Identifiable, Equatable {
     /// picker. The authoritative check is engine.checkVolumeSupport on select.
     let fsType: String
     let isWritable: Bool
+    /// Space the OS reports as available for "important usage" (matches what Finder
+    /// shows as Available). nil if the volume didn't report it.
+    let freeBytes: Int64?
     var id: String { url.path }
 
     /// A cheap, read-only guess at whether Symly can use this drive, shown inline
-    /// in the picker so the user does not pick a dead end. exFAT/FAT cannot store
-    /// a symlink at all; a read-only mount cannot be written; network shares vary
-    /// by server (selectable, but flagged). Everything else is treated as usable
-    /// and confirmed by the real probe when selected.
+    /// in the picker. A read-only mount cannot be written; network shares vary by
+    /// server (selectable, but flagged). Everything else, including exFAT/FAT
+    /// (which DO support symlinks on macOS, verified on real hardware), is treated
+    /// as usable and confirmed by the real probe when selected.
     enum Eligibility: Equatable {
         case eligible
         case network
@@ -28,11 +31,12 @@ struct VolumeInfo: Identifiable, Equatable {
     var eligibility: Eligibility {
         if !isWritable { return .readOnly }
         switch fsType {
-        case "exfat", "msdos", "vfat", "fat", "fat32", "ms-dos":
-            return .unsupported("exFAT/FAT")
         case "smbfs", "nfs", "afpfs", "webdav", "ftp":
             return .network
         default:
+            // APFS, Mac OS Extended, and exFAT/FAT all support symlinks on macOS,
+            // so we never pre-block by filesystem name. The on-select probe is the
+            // real gate and catches anything that genuinely can't hold a link.
             return .eligible
         }
     }
@@ -47,13 +51,29 @@ struct VolumeInfo: Identifiable, Equatable {
         }
     }
 
-    /// Whether the row can be chosen. exFAT/FAT and read-only drives can't be,
-    /// so the picker shows them disabled rather than letting setup fail.
+    /// Whether the row can be chosen. Read-only drives can't be (nor any drive the
+    /// real probe later rejects), so the picker shows those disabled.
     var isSelectable: Bool {
         switch eligibility {
         case .unsupported, .readOnly: return false
         case .eligible, .network: return true
         }
+    }
+
+    /// exFAT and FAT have no ACLs, so the projects-folder lock can't apply there.
+    /// Symlinks work fine; only the optional deny-delete lock is unavailable.
+    var supportsFolderLock: Bool {
+        !["exfat", "msdos", "vfat", "fat", "fat32", "ms-dos"].contains(fsType)
+    }
+
+    /// Human-readable free space, e.g. "467 GB free". nil when the volume didn't
+    /// report a usable figure, so the UI can simply omit it.
+    var freeSpaceLabel: String? {
+        guard let freeBytes, freeBytes > 0 else { return nil }
+        let f = ByteCountFormatter()
+        f.countStyle = .file
+        f.allowedUnits = [.useGB, .useTB]
+        return f.string(fromByteCount: freeBytes) + " free"
     }
 }
 
@@ -62,6 +82,7 @@ enum Volumes {
         let keys: [URLResourceKey] = [
             .volumeNameKey, .volumeIsBrowsableKey, .volumeIsRemovableKey,
             .volumeIsInternalKey, .volumeIsEjectableKey,
+            .volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey,
         ]
         let urls = FileManager.default.mountedVolumeURLs(
             includingResourceValuesForKeys: keys,
@@ -78,28 +99,39 @@ enum Volumes {
             // Pro Avid media lives on a dedicated external/secondary drive anyway.
             guard url.standardizedFileURL.path != "/" else { return nil }
             let fs = filesystem(of: url)
+            // forImportantUsage is APFS-aware (counts purgeable space) but returns
+            // nil/0 on exFAT, HFS+, and shares; fall back to the plain available
+            // capacity, then to statfs, so every drive reports a figure.
+            let positive: (Int64) -> Int64? = { $0 > 0 ? $0 : nil }
+            let free: Int64? = v.volumeAvailableCapacityForImportantUsage.flatMap(positive)
+                ?? v.volumeAvailableCapacity.map(Int64.init).flatMap(positive)
+                ?? fs.freeBytes
             return VolumeInfo(
                 url: url,
                 name: v.volumeName ?? url.lastPathComponent,
                 isRemovable: (v.volumeIsRemovable ?? false) || (v.volumeIsEjectable ?? false),
                 isInternal: v.volumeIsInternal ?? false,
                 fsType: fs.type,
-                isWritable: fs.writable
+                isWritable: fs.writable,
+                freeBytes: free
             )
         }
     }
 
     /// The filesystem type name and writability of a volume, via statfs. This only
     /// reads mount metadata; it never writes to the drive.
-    private static func filesystem(of url: URL) -> (type: String, writable: Bool) {
+    private static func filesystem(of url: URL) -> (type: String, writable: Bool, freeBytes: Int64?) {
         var s = statfs()
-        guard statfs(url.path, &s) == 0 else { return ("", true) }
+        guard statfs(url.path, &s) == 0 else { return ("", true, nil) }
         let type = withUnsafePointer(to: &s.f_fstypename) {
             $0.withMemoryRebound(to: CChar.self, capacity: Int(MFSTYPENAMELEN)) {
                 String(cString: $0)
             }
         }
         let writable = (s.f_flags & UInt32(MNT_RDONLY)) == 0
-        return (type.lowercased(), writable)
+        // f_bavail (blocks free to a non-root user) * f_bsize. Works on every
+        // mounted filesystem, including exFAT, where the URL keys come back empty.
+        let free = Int64(s.f_bavail) * Int64(s.f_bsize)
+        return (type.lowercased(), writable, free > 0 ? free : nil)
     }
 }

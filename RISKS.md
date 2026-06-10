@@ -65,10 +65,14 @@ force.
 
 ## Filesystem support (the volume can't do what we need)
 
-- **exFAT / FAT32 / MS-DOS: cannot store symlinks at all.** **[fixed/app]**
+- **Filesystem genuinely can't store a symlink.** **[fixed/app]**
   `checkVolumeSupport` probes the drive (create + read back + remove a temp link)
-  and reports `noSymlinks`; the app turns the drive away with a clear reason
-  before any setup. Test: `testVolumeSupportOKOnTempVolume` (positive path).
+  and reports `noSymlinks` only when the link truly fails (e.g. some SMB/NAS
+  shares). Test: `testVolumeSupportOKOnTempVolume` (positive path).
+  NOTE: exFAT and FAT **do** support symlinks on macOS (verified on real exFAT
+  hardware), so they are NOT blocked. The old "exFAT can't do symlinks" line was a
+  Windows fact wrongly applied; corrected. The one exFAT gap is the deny-delete
+  folder lock (no ACLs on exFAT), which is hidden in Settings on those drives.
 - **Read-only / locked mount or missing write permission.** **[fixed/app]**
   `checkVolumeSupport` returns `notWritable`.
 - **SMB / NAS / Avid NEXIS: symlink support varies by server.** **[validate]**

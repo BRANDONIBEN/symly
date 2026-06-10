@@ -34,6 +34,9 @@ final class AppModel: ObservableObject {
     @Published var showingNewProject = false
     @Published var justCompletedSetup = false
     @Published var page: AppPage = .none
+    /// True until the user finishes the first-run How It Works screen. Persisted,
+    /// so it only ever appears on the very first launch.
+    @Published var showOnboarding: Bool = !UserDefaults.standard.bool(forKey: "hasOnboarded")
 
     @Published var errorMessage: String?
 
@@ -125,6 +128,13 @@ final class AppModel: ObservableObject {
 
     func reloadVolumes() {
         volumes = Volumes.mounted()
+        // Keep the active drive's snapshot current (free space, writability) while
+        // it stays mounted; leave it untouched if it has gone away, so the
+        // disconnect state still shows the last-known name.
+        if let sel = selectedVolume,
+           let fresh = volumes.first(where: { $0.url.path == sel.url.path }) {
+            selectedVolume = fresh
+        }
         // Drop cached probe results for drives that are no longer mounted, so a
         // reconnected (or reformatted) drive is re-probed fresh.
         let live = Set(volumes.map { $0.url.path })
@@ -147,7 +157,7 @@ final class AppModel: ObservableObject {
         // blocked screen instead of a setup flow that would fail.
         switch volumeSupport(ws) {
         case .noSymlinks:
-            setup = .blocked(reason: "This drive's format can't store the symlink Symly needs (it looks like exFAT or FAT, or a share that doesn't support links). Reformat it as APFS or Mac OS Extended, or pick a different drive. Your media is not touched.")
+            setup = .blocked(reason: "This drive can't store the symlink Symly needs. That is usually a network or shared volume whose server doesn't support links. A local drive works (APFS, Mac OS Extended, and exFAT all do), or pick a different one. Your media is not touched.")
         case .notWritable:
             setup = .blocked(reason: "This drive is read-only, so Symly can't create the link here. Make sure the drive is unlocked and you have write access, or pick a different drive.")
         case .ok:
@@ -227,6 +237,12 @@ final class AppModel: ObservableObject {
 
     func dismissSetupDone() { justCompletedSetup = false }
 
+    /// Finish the first-run How It Works screen. It is never shown again.
+    func completeOnboarding() {
+        UserDefaults.standard.set(true, forKey: "hasOnboarded")
+        showOnboarding = false
+    }
+
     @discardableResult
     func createProject(named name: String) -> Bool {
         guard let ws = workspace else { return false }
@@ -297,10 +313,14 @@ final class AppModel: ObservableObject {
         ensureProtection()
     }
 
-    /// Make the on-disk lock match the current preference. Locking is idempotent;
-    /// the folder's contents stay fully writable either way.
+    /// Whether the active drive's filesystem supports the folder lock. exFAT and
+    /// FAT have no ACLs, so the lock can't apply there; symlinks still work fine.
+    var folderLockAvailable: Bool { selectedVolume?.supportsFolderLock ?? true }
+
+    /// Make the on-disk lock match the current preference, where the drive
+    /// supports it. Locking is idempotent; contents stay fully writable either way.
     private func ensureProtection() {
-        guard let ws = workspace,
+        guard let ws = workspace, folderLockAvailable,
               FileManager.default.fileExists(atPath: ws.projectsRoot.path) else { return }
         if protectProjectsFolder { folderLock.lock(ws.projectsRoot) }
         else { folderLock.unlock(ws.projectsRoot) }

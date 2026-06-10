@@ -212,10 +212,11 @@ public struct SymlinkEngine: Sendable {
     // MARK: Volume support
 
     /// Whether the chosen volume can host the symlink Symly depends on. Run once
-    /// when a drive is picked: exFAT/FAT32 can't store symlinks and a read-only
-    /// mount can't be written, so we turn the drive away with a clear reason
-    /// instead of failing partway through setup. The probe creates and removes a
-    /// single hidden link; it never touches the user's media.
+    /// when a drive is picked: some volumes (a few SMB/NAS shares) silently fail to
+    /// store a symlink, and a read-only mount can't be written, so we turn the
+    /// drive away with a clear reason instead of failing partway through setup.
+    /// exFAT and FAT pass here: they support symlinks on macOS. The probe creates
+    /// and removes a single hidden link; it never touches the user's media.
     public func checkVolumeSupport(_ ws: Workspace) -> VolumeSupport {
         let dir = fm.fileExists(atPath: ws.avidMediaFiles.path) ? ws.avidMediaFiles : ws.root
         guard fm.isWritableFile(atPath: dir.path) else { return .notWritable }
