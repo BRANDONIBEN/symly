@@ -354,8 +354,12 @@ final class AppModel: ObservableObject {
             folderLock.unlock(ws.projectsRoot)
             if let plan = engine.planRemoveLink(in: ws) { try? engine.apply(plan) }
         }
-        // 2. Clear preferences and the remembered-drive bookmark.
-        UserDefaults.standard.removeObject(forKey: "protectProjectsFolder")
+        // 2. Clear ALL of Symly's preferences (the onboarding flag, the protection
+        //    setting, anything else) plus the remembered-drive bookmark, so a later
+        //    reinstall starts truly fresh and the first-run screen shows again.
+        if let domain = Bundle.main.bundleIdentifier {
+            UserDefaults.standard.removePersistentDomain(forName: domain)
+        }
         VolumeAccess.forget()
         // 3. Move the app to the Trash, then quit.
         NSWorkspace.shared.recycle([Bundle.main.bundleURL]) { _, _ in
