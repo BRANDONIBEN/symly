@@ -5,13 +5,13 @@ let package = Package(
     name: "Symly",
     platforms: [.macOS(.v13)],
     dependencies: [
-        .package(path: "../MediaOrganizerCore"),
+        .package(path: "../SymlyCore"),
     ],
     targets: [
         .executableTarget(
             name: "Symly",
             dependencies: [
-                .product(name: "MediaOrganizerCore", package: "MediaOrganizerCore"),
+                .product(name: "SymlyCore", package: "SymlyCore"),
             ]
         ),
     ]

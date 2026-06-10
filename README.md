@@ -4,57 +4,55 @@ A free, open-source macOS app that organizes Avid Media Composer's MXF media by
 project **without ever moving, copying, or deleting a single file**.
 
 Avid forces media into a rigid location (`Avid MediaFiles/MXF`). Instead of
-shuffling folders by hand, this app makes that rigid path a **symlink** that
-points at whatever named project folder you pick. Avid writes exactly where it
-always has; the media lands in the folder you chose; switching projects just
-repoints one link. Nothing is copied. Nothing is moved. Nothing is ever deleted
-except the symlink itself.
+shuffling folders by hand, Symly makes that rigid path a **symlink** that points
+at whatever media folder you pick. Avid writes exactly where it always has; the
+media lands in the folder you chose; switching projects just repoints one link.
+Nothing is copied. Nothing is moved. Nothing is ever deleted except the symlink
+itself.
 
-A rebuild of the tool Brandon Iben designed/built at Final Cut in 2022, now made
-free for any editor. Universal (Apple Silicon + Intel).
+Universal (Apple Silicon + Intel). Requires macOS 13 Ventura or later.
+
+## Install
+
+Download the latest signed and notarized build from
+[getsymly.app](https://getsymly.app) or the
+[Releases page](https://github.com/brandoniben/symly/releases/latest). Open the
+DMG and drag Symly to your Applications folder. It opens with no Gatekeeper
+warning.
+
+## How it works
+
+1. Pick the drive your Avid media lives on.
+2. Create a media folder, or point Symly at an existing one.
+3. Switch your active Avid project in one click. Symly repoints the
+   `Avid MediaFiles/MXF` symlink to the media folder you chose.
+
+Works on APFS, Mac OS Extended, and exFAT.
 
 ## The safety promise (non-negotiable)
 
-The app (and even the spike script) only ever create or remove **symlinks**.
-The engine refuses to delete anything that is not a symlink, never recursive-
-deletes, and never overwrites a real folder (it relocates it with a same-volume
-rename first). Your `.mxf` / `.mdb` / `.pmr` files are never touched.
+Symly only ever creates or removes **symlinks**. The engine refuses to delete
+anything that is not a symlink, never recursive-deletes, and never overwrites a
+real folder (it relocates it with a same-volume rename first). Your `.mxf`,
+`.mdb`, and `.pmr` files are never touched. Each project keeps its own Avid
+database pair, so Media Composer relinks cleanly.
 
-## Status
+See [RISKS.md](RISKS.md) for the full failure-mode analysis and how the engine
+guards against each one.
 
-Pre-release. Building in phases (the gate is a real-Avid test, below).
-
-- ✅ **Phase 0 spike kit**: `phase0-spike/` (a safe script + checklist to prove
-  Avid follows a repointed symlink on real hardware). **Run this first.**
-- 🔨 **Core safety engine**: `MediaOrganizerCore/` (pure-Swift, unit-tested).
-- ⏳ Volume access + drive watcher, SwiftUI app, packaging/notarization (next).
-
-## Layout
-
-```
-phase0-spike/        spike.sh + CHECKLIST.md: validate the mechanism on a real drive
-MediaOrganizerCore/  Swift Package: the headless engine + safety guard + tests
-```
-
-## Quickstart: Phase 0
+## Build from source
 
 ```sh
-cd phase0-spike
-chmod +x spike.sh
-./spike.sh help
+# the engine: pure Swift, unit-tested
+cd SymlyCore && swift test
+
+# the app
+cd app && swift build && ./make-app.sh debug   # produces dist/Symly.app
 ```
 
-Then follow `phase0-spike/CHECKLIST.md` on a Mac with Avid. If the import /
-switch / relink test passes, the rest of the app gets built on top of the
-`MediaOrganizerCore` engine.
-
-## Design
-
-The look and interaction are already designed: a dark, pro-editorial UI with a
-magenta accent that *is* the symlink. Source of truth for the visual language is
-the animated mockup in the portfolio repo
-(`brandoniben_dot_com/components/media/avid-mxf-app.tsx`) and the full build plan
-at `~/.claude/plans/id-like-to-take-sprightly-melody.md`.
+- `SymlyCore/` is the headless engine plus its safety guard and tests.
+- `app/` is the SwiftUI app built on top of it.
+- `phase0-spike/spike.sh` validates the mechanism on a real Avid drive.
 
 ## License
 

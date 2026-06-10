@@ -1,6 +1,6 @@
 import SwiftUI
 import Combine
-import MediaOrganizerCore
+import SymlyCore
 
 let panelWidth: CGFloat = 420
 let panelHeight: CGFloat = 600
@@ -900,8 +900,8 @@ struct StepRow: View {
     }
 }
 
-/// Orthogonal symlink trace, ported from the portfolio mockup: a right-angle
-/// routed path with a soft glow, a crisp accent line, and a white pulse.
+/// Orthogonal symlink trace: a right-angle routed path with a soft glow, a
+/// crisp accent line, and a white pulse.
 struct OrthogonalTrace: Shape {
     var startX: CGFloat
     var startY: CGFloat
@@ -922,9 +922,9 @@ struct OrthogonalTrace: Shape {
     }
 }
 
-/// The symlink trace, styled exactly like the portfolio mockup: a blurred
-/// accent glow underlay, a thin gradient line with square caps + miter joins,
-/// a white 2/10 flowing dash, a circle at the source and a square at the target.
+/// The symlink trace: a blurred accent glow underlay, a thin gradient line with
+/// square caps + miter joins, a white 2/10 flowing dash, a circle at the source
+/// and a square at the target.
 struct SymlinkTrace: View {
     let startX: CGFloat
     let startY: CGFloat

@@ -20,7 +20,7 @@
 #     refuses to run if it would cross volumes (which would copy).
 #   * `teardown` only ever removes a sandbox THIS script created (marker file).
 #
-# See CHECKLIST.md for the full real-Avid walkthrough.
+# It validates the real-Avid mechanism: import, switch, relaunch, relink.
 
 set -euo pipefail
 
@@ -179,8 +179,8 @@ COMMANDS
   help                This text.
 
 REAL-AVID TEST
-  See CHECKLIST.md for the walkthrough that proves Media Composer follows the
-  repointed link through import / switch / relaunch / relink.
+  Validates that Media Composer follows the repointed link through
+  import / switch / relaunch / relink on real hardware.
 EOF
 }
 

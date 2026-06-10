@@ -17,8 +17,13 @@ dist/
 *.dmg
 *.app
 
-# Local secrets (notarization creds, etc.) — never commit
+# Local secrets (notarization creds, etc.); never commit
 .env
 *.p12
 *.cer
 notary-*.json
+
+# Internal-only docs (kept local, not part of the public repo)
+/BEFORE-PUSH.md
+/RELEASE.md
+/phase0-spike/CHECKLIST.md

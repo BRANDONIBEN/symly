@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 import LocalAuthentication
-import MediaOrganizerCore
+import SymlyCore
 
 /// Where the app is in its flow, derived from the chosen volume + its setup state.
 enum Phase: Equatable {

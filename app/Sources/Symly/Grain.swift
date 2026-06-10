@@ -3,7 +3,7 @@ import CoreImage
 import AppKit
 
 /// A faint monochrome noise tile that gives the dark panel a subtle paper-like
-/// "tooth," echoing the portfolio's paper-grain. Built once, tiled, low opacity.
+/// "tooth." Built once, tiled, low opacity.
 enum Grain {
     static let tile: Image? = build()
 

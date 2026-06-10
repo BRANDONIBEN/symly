@@ -1,5 +1,5 @@
 import XCTest
-@testable import MediaOrganizerCore
+@testable import SymlyCore
 
 final class ProjectStoreTests: XCTestCase {
 

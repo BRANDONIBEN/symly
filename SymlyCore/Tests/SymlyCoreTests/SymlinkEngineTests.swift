@@ -1,5 +1,5 @@
 import XCTest
-@testable import MediaOrganizerCore
+@testable import SymlyCore
 
 /// These tests are the executable form of the "never delete media, ever"
 /// promise. They run against throwaway temp directories.
